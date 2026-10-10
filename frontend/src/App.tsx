@@ -11,6 +11,7 @@ const JournalPage = lazy(() => import("./pages/JournalPage"));
 const ArchiveCatalogPage = lazy(() => import("./pages/ArchiveCatalogPage"));
 const ThreadsPage = lazy(() => import("./pages/ThreadsPage"));
 const TeacherPage = lazy(() => import("./pages/TeacherPage"));
+const ChatPage = lazy(() => import("./pages/ChatPage"));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/archives/:code" element={<ArchivePage />} />
         <Route path="/threads" element={<ThreadsPage />} />
         <Route path="/teacher" element={<TeacherPage />} />
+        <Route path="/chat" element={<ChatPage />} />
         <Route path="/journal" element={<JournalPage />} />
         <Route path="/knowledge" element={<KnowledgePage />} />
       </Route>

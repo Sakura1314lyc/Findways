@@ -20,7 +20,6 @@ from app.schemas.archives import (
     ThreadNoteRequest,
     TransferRequest,
 )
-from app.services.archive_agent_service import ArchiveAgentService
 from app.services.archive_cards_service import (
     cards_mode,
     case_cards,
@@ -38,6 +37,7 @@ from app.services.archive_cards_service import (
 from app.services.archive_loader import load_cases
 from app.services.archive_report_service import ArchiveReportService
 from app.services.archive_thread_service import ArchiveThreadService
+from app.services.chat_compat_service import ArchiveChatCompatibilityService
 
 router = APIRouter()
 ROLES = ("context", "practice", "theory")
@@ -417,14 +417,14 @@ async def guide(code: str, payload: GuideRequest, user: CurrentUser, session: Se
         return {"answer": fallback, "mode": "offline"}
 
 
-@router.get("/cases/{code}/agent/history", response_model=list[AgentTurnOut])
+@router.get("/cases/{code}/agent/history", response_model=list[AgentTurnOut], deprecated=True)
 async def agent_history(code: str, user: CurrentUser, session: SessionDep) -> list[AgentTurnOut]:
     case = _case(code)
     row = await _progress(session, user.id, code)
-    return await ArchiveAgentService(session).history(user.id, case, bool(row and row.clues_solved))
+    return await ArchiveChatCompatibilityService(session).history(user.id, case, bool(row and row.clues_solved))
 
 
-@router.post("/cases/{code}/agent", response_model=AgentTurnOut)
+@router.post("/cases/{code}/agent", response_model=AgentTurnOut, deprecated=True)
 async def investigate_case(
     code: str, payload: AgentRequest, user: CurrentUser, session: SessionDep, llm: LLMDep,
 ) -> AgentTurnOut:
@@ -432,4 +432,4 @@ async def investigate_case(
     row = await _progress(session, user.id, code)
     if row is None:
         raise BusinessRuleError("请先打开档案")
-    return await ArchiveAgentService(session).investigate(user.id, case, row, payload, llm)
+    return await ArchiveChatCompatibilityService(session).investigate(user.id, case, row, payload, llm)

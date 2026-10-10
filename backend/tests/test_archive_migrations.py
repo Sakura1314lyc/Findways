@@ -38,6 +38,7 @@ def test_upgrade_downgrade_preserves_current_tables(tmp_path):
         retained = {
             "users", "refresh_tokens", "archive_progress", "knowledge_points",
             "archive_activities", "archive_agent_turns",
+            "chat_sessions", "chat_messages",
         }
         assert retained <= tables(connection)
         assert connection.execute("select reflection from archive_progress").fetchone() == ("preserve this note",)

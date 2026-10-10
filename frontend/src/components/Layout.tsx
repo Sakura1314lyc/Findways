@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, ArrowUpRight, BookMarked, Compass, GraduationCap, LogOut, Menu, NotebookPen, Route, X } from "lucide-react";
+import { Archive, ArrowUpRight, BookMarked, Compass, GraduationCap, LogOut, Menu, MessageCircle, NotebookPen, Route, X } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuthStore } from "../stores/auth";
@@ -10,6 +10,7 @@ const nav = [
   { to: "/threads", label: "档案主线", icon: Route, sub: "把线索连成脉络" },
   { to: "/knowledge", label: "理论手册", icon: BookMarked, sub: "把知识连起来" },
   { to: "/journal", label: "我的发现", icon: NotebookPen, sub: "记录探索足迹" },
+  { to: "/chat", label: "聊天助手", icon: MessageCircle, sub: "答疑、咨询，或聊聊今天" },
 ];
 
 const teacherNav = { to: "/teacher", label: "教师看板", icon: GraduationCap, sub: "错卡热力图" };

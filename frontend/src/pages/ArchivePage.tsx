@@ -8,7 +8,7 @@ import type {
 } from "../lib/archive";
 import { cardStatusLabel, coverClass, rejectLabel, stageMeta, threadMeta } from "../lib/archive";
 import ArchiveArtwork from "../components/ArchiveArtwork";
-import ArchiveAgentPanel from "../components/ArchiveAgentPanel";
+import ChatWorkspace from "../components/ChatWorkspace";
 import { useAuthStore } from "../stores/auth";
 
 const stageOrder: ("context" | "practice" | "theory")[] = ["context", "practice", "theory"];
@@ -418,9 +418,9 @@ export default function ArchivePage() {
         ))}
       </nav>
 
-      <a href="#archive-agent" className="archive-panel flex items-center justify-between gap-3 p-4 text-sm font-medium text-[#33503c] xl:hidden">需要下一条线索？打开档案探究 Agent <ArrowRight size={16} className="shrink-0" /></a>
+      <Link to={"/chat?case=" + code} className="archive-chat-shortcut xl:hidden"><span><strong>想问问，或聊聊？</strong><small>带着这份档案进入聊天助手</small></span><ArrowRight size={18} className="shrink-0" /></Link>
 
-      <section className="archive-dossier-workspace grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,.75fr)]">
+      <section className="archive-dossier-workspace grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,.75fr)]">
         <div className="min-w-0 space-y-6">
           <div id="evidence" className="archive-scroll-target">
             <div className="archive-eyebrow">01 / READ &amp; SORT THE EVIDENCE</div>
@@ -811,8 +811,8 @@ export default function ArchivePage() {
           )}
         </div>
 
-        <aside className="space-y-5 self-start xl:sticky xl:top-[92px]">
-          {code && <ArchiveAgentPanel key={code} code={code} cards={cards} />}
+        <aside className="min-w-0 space-y-5 self-start xl:sticky xl:top-[92px]">
+          {code && <div className="hidden xl:block"><ChatWorkspace key={code} caseCode={code} caseTitle={caseData.title} compact /></div>}
           <div className="archive-panel p-5">
             <div className="archive-eyebrow">EXPLORER'S NOTE</div>
             <h2 className="mt-2 font-serif text-lg font-semibold text-[#2e4034]">阅读方法</h2>

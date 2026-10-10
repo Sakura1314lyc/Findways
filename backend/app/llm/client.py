@@ -59,6 +59,8 @@ class LLMPort(Protocol):
     provider: str
     is_mock: bool
 
+    async def chat_messages(self, messages: list[dict[str, str]], max_tokens: int = 1800) -> str: ...
+
     async def chat(
         self,
         system: str,
@@ -81,6 +83,9 @@ class LLMPort(Protocol):
 class MockLLMClient:
     provider = "mock"
     is_mock = True
+
+    async def chat_messages(self, messages: list[dict[str, str]], max_tokens: int = 1800) -> str:
+        raise LLMServiceError("聊天模型尚未连接，请联系管理员配置模型服务。")
 
     async def chat(
         self, system: str, user: str, temperature=None, max_tokens: int = 1200, json_mode: bool = False
@@ -106,6 +111,7 @@ class OpenAICompatibleClient:
             api_key=settings.llm_api_key,
             base_url=settings.llm_base_url,
             timeout=settings.llm_timeout_seconds,
+            max_retries=0,
         )
 
     async def _create(self, messages: list[dict], temperature: float, max_tokens: int, json_mode: bool):
@@ -144,6 +150,9 @@ class OpenAICompatibleClient:
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
         temp = 0.7 if temperature is None else temperature
         return (await self._create(messages, temp, max_tokens, json_mode)).strip()
+
+    async def chat_messages(self, messages: list[dict[str, str]], max_tokens: int = 1800) -> str:
+        return (await self._create(messages, 0.5, max_tokens, False)).strip()
 
     async def chat_json(self, system: str, user: str, fallback=None, temperature: float = 0.3, max_tokens: int = 900):
         try:

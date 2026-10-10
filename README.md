@@ -35,13 +35,28 @@
 
 界面保留纸质档案与专题线稿风格。手机为单列卡片布局，已完成的归类会恢复，未提交笔记保存在当前浏览器标签页中。
 
-## 档案探究 Agent
+## 聊天助手
 
-关卡侧栏提供分步探究：Agent 观察当前账号、本关进度和合法排序的核对记录；根据提问或指定卡片选择档案材料；排序解锁后，还能检索本关关联的理论手册知识点；最后提出一个需要学生自己验证的问题。界面显示本轮用到的工具、材料和出处，支持回看最近的探究记录。
+导航中的“聊天助手”提供独立会客室，支持课程答疑、学习与生活咨询、一般知识和日常聊天。关卡桌面侧栏内可以直接提问，手机通过关卡里的聊天入口打开完整页面。关联关卡的对话会附带公开档案及出处，课程问题还会检索理论手册；其他话题可以直接交流。
 
-默认离线模式使用相同的观察、取证和提问流程，根据问题匹配材料并轮换线索。配置兼容大模型时，模型负责选择已授权的取证工具、材料编号和提问方式；后端核验选择是否属于本关、是否已解锁，再读取材料。模型异常或选择无效时回落离线规划。Agent 不输出卡片的正确归类、干扰卡身份、未解锁的理论摘要或内部引导问题，也不会替学生归类或写笔记。外部模型只收到本关公开材料、学习阶段和本关最近三次提问，不发送笔记正文。
+回复由已配置的大模型生成，支持连续追问、Markdown 列表、表格与代码块。每次调用携带最近六轮对话（另有历史字数限制），全部消息在自有数据库保存，可重新打开、查看更早消息或删除对话。对话按账号隔离；未发送输入在当前浏览器标签页保留，失败时可以重试，同一请求不会重复保存消息。
 
-新增 `POST /api/v1/archives/cases/{code}/agent` 和 `GET /api/v1/archives/cases/{code}/agent/history`；原 `/guide` 接口保留。探究记录存于 `archive_agent_turns`，只对当前账号开放。
+**未配置模型时显示“模型待连接”，不能发送聊天消息；档案游戏仍可完整离线使用。** 模型故障时提示重试，不生成冒充模型回复的模板。当前聊天没有联网查询或实时天气等工具。课程回复需结合教材核对，教学摘要不当作原文引用。服务不会自动发送账号资料或发现笔记；聊天输入和必要的公开课程资料会发送到你配置的模型服务。
+
+新增 `/api/v1/chat/status`、`/chat/sessions`（列表/创建）、`/chat/sessions/{id}`（详情/删除）及 `/chat/sessions/{id}/messages`（发送）。旧 `/archives/cases/{code}/agent` 已标记弃用并改为真实聊天的兼容入口，历史接口与 `archive_agent_turns` 仅保留原有记录兼容；旧规划服务和前端面板已移除。
+
+### 接入聊天 API
+
+在 `backend/.env` 填写兼容 Chat Completions 协议的模型服务配置，然后重启后端。例如使用现有 DeepSeek 配置：
+
+```dotenv
+LLM_PROVIDER=deepseek
+LLM_API_KEY=填写你自己的密钥
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-chat
+```
+
+其他兼容服务使用 `LLM_PROVIDER=openai_compatible`，地址和模型名称按服务商说明填写。密钥只放后端 `.env`，不要填到前端或提交到 Git。已有配置项 `LLM_TIMEOUT_SECONDS`、`LLM_MAX_RETRIES` 继续有效；聊天请求整体最多等待 90 秒。
 
 ## 档案主线
 
@@ -87,7 +102,7 @@ cd backend
 
 首次启动播种知识点，档案关卡读取 `backend/app/seeds/archive_cases.json`。修改关卡 JSON 后需重启后端，清除进程中的缓存。接口文档：`http://localhost:8000/docs`。
 
-默认 `LLM_PROVIDER=mock`，无需 API Key 即可完成全部流程。可在后端 `.env` 配置兼容模型；缺少 Key 时自动使用离线模式。进度与笔记保存在自有数据库中。
+默认 `LLM_PROVIDER=mock`，无需 API Key 即可完成全部档案学习流程。聊天需要配置模型和 Key；缺少 Key 时游戏仍离线运行，聊天显示待连接。进度、笔记与聊天记录保存在自有数据库中。
 
 ### 前端（另开终端，从项目根目录执行）
 
@@ -110,7 +125,7 @@ docker compose up --build -d
 
 ## 数据库升级与备份
 
-当前迁移头为 `68e199016eeb`：新增 `archive_thread_notes`，按账号保存主线小结。此前的 `593e150c7e9f` 为 `archive_progress` 增加卡片体系的进度字段（`attempts`、`hints_used`、`best_score`、`passed_at`、`probe_passed`、`detail`），历史行按默认值补齐，笔记与完成状态不受影响；`a619e238c704` 新增 `archive_agent_turns`，保存每关探究记录；`d04b37a12082` 新增 `archive_activities`，记录新关卡开启和合法核对尝试；`c91f2a60d701` 清理已下线功能的六张表。`archive_progress`、`knowledge_points`、`users`、`refresh_tokens` 保留。
+当前迁移头为 `f92d3e48a761`：新增 `chat_sessions`、`chat_messages`，保存按账号隔离的会话与消息。此次迁移只新增聊天表，原有账号、学习进度、笔记和旧探究记录保留。上一版本 `68e199016eeb` 新增 `archive_thread_notes`；此前的 `593e150c7e9f` 为 `archive_progress` 增加卡片体系的进度字段，`a619e238c704` 新增 `archive_agent_turns`，`d04b37a12082` 新增 `archive_activities`，`c91f2a60d701` 清理已下线功能的六张表。
 
 升级前备份数据库。此次本地修改前的数据库与源码备份位于项目 `backups/`，该目录不纳入版本管理。迁移 downgrade 能恢复移除的表结构，但不能恢复删除的数据；数据恢复需使用升级前备份。
 
@@ -132,9 +147,9 @@ npm run build
 npm run smoke
 ```
 
-pytest 使用临时 SQLite 和 mock 模型，覆盖卡片计分（归类、干扰剔除、压线通过与不通过）、剔除理由必填、非法提交、提示阶梯与耗尽、因果连线（多来源接受、载荷校验）、缺失补全（要点覆盖、原文揭示）、时间轴（分区校验、位置计分、干扰剔除）、主线归位（多来源答案、载荷校验）、通关追问与迁移判定、解锁前后字段隔离、主线收集（隐藏卡需补全后才计入、账号隔离、小结更新）、教师看板（角色声明、匿名聚合、错卡计数与前后差值）、Agent 分阶段取证与历史记录、报告空态/部分/全部完成、历史尝试缺失、模型异常回落与迁移往返。
+pytest 使用临时 SQLite 和测试模型，覆盖原有档案、主线、教师看板和报告流程，以及聊天的多轮上下文、账号隔离、请求去重、并发冲突、历史分页、空白输入、上游故障与无模型状态。SDK 测试验证实际发出的消息协议，迁移测试验证升级与回退，保留原有档案笔记。
 
-smoke 需已启动前后端及本机 Chrome，覆盖注册、卡片归类与干扰剔除、提示、因果连线、缺失补全、追问与迁移、解锁、综合关时间轴与主线归位、Agent 取证与历史恢复、草稿恢复、保存笔记、学习报告、档案主线、拓展与综合关筛选和移动端溢出检查。可配置 `CHROME_PATH`、`SMOKE_BASE_URL`、`SMOKE_OUTPUT`；使用独立测试数据库运行，避免写入日常账号数据。
+smoke 需已启动前后端及本机 Chrome，覆盖原有游戏流程、报告、主线、手机布局和无模型时的聊天状态。可配置 `CHROME_PATH`、`SMOKE_BASE_URL`、`SMOKE_OUTPUT`；配置 `SMOKE_CHAT_ONLINE=1` 会另外验证真实 HTTP 链路上的多轮聊天、刷新恢复、新建/删除、关卡切换和 320px 手机长消息溢出。使用独立测试数据库运行，避免写入日常账号数据；`backend/tests/chat_smoke_provider.py` 是本地联调专用服务，明确返回测试回复，不供实际使用。
 
 ## 主要目录
 
@@ -155,9 +170,13 @@ smoke 需已启动前后端及本机 Chrome，覆盖注册、卡片归类与干�
 - `backend/app/schemas/archive_report.py`：报告响应结构。
 - `backend/app/db/models/archive.py`：原有个人探索进度。
 - `backend/app/db/models/archive_activity.py`：新增活动记录。
-- `backend/app/services/archive_agent_service.py`：探究 Agent 的观察、规划、取证与下一步提问。
+- `backend/app/services/chat_service.py`：多轮聊天、课程资料检索、失败处理与请求去重。
+- `backend/app/api/v1/chat.py`：聊天状态、会话和消息接口。
+- `backend/app/db/models/chat.py`：会话与消息数据表。
+- `backend/app/services/chat_compat_service.py`：旧探究接口兼容入口。
 - `backend/app/db/models/archive_agent.py`：按账号保存本关探究记录。
-- `frontend/src/components/ArchiveAgentPanel.tsx`：展示取证依据、提问入口和探究历史。
+- `frontend/src/components/ChatWorkspace.tsx`：聊天窗口、会话记录与手机布局。
+- `frontend/src/pages/ChatPage.tsx`：独立聊天页面。
 - `frontend/src/pages/ThreadsPage.tsx`：档案主线页面，展示收集进度与主线小结。
 - `frontend/src/pages/TeacherPage.tsx`：教师看板，展示匿名汇总与错卡热力图。
 - `frontend/src/components/LearningReport.tsx`：学习报告区块。

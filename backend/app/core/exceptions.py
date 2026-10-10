@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -64,7 +65,11 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def validation_error_handler(_: Request, exc: RequestValidationError):
         return JSONResponse(
             status_code=422,
-            content=_error_body("validation_error", "请求参数校验失败", detail=exc.errors()),
+            content=_error_body(
+                "validation_error",
+                "请求参数校验失败",
+                detail=jsonable_encoder(exc.errors(), custom_encoder={ValueError: str}),
+            ),
         )
 
     @app.exception_handler(Exception)

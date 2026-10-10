@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { chromium } from "playwright-core";
 
 const baseURL = process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:5173";
+const chatOnline = process.env.SMOKE_CHAT_ONLINE === "1";
 const outputDir = process.env.SMOKE_OUTPUT ?? join(process.cwd(), "qa-screenshots");
 const chromePath = process.env.CHROME_PATH ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
 await mkdir(outputDir, { recursive: true });
@@ -23,6 +24,7 @@ function observe(page) {
 async function capture(page, name) {
   await page.screenshot({ path: join(outputDir, name), fullPage: false, animations: "disabled" });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
+  if (overflow) console.log(await page.evaluate(() => Array.from(document.querySelectorAll("body *")).filter((item) => item.getBoundingClientRect().right > innerWidth + 1 && getComputedStyle(item).position !== "fixed").slice(0, 12).map((item) => ({ tag: item.tagName, class: item.className, width: item.getBoundingClientRect().width }))));
   assert.equal(overflow, false, name + " overflows horizontally");
 }
 
@@ -160,12 +162,19 @@ try {
   await page.getByRole("heading", { name: "革命道路为何走向农村？" }).waitFor();
   await capture(page, "case-desktop.png");
 
-  await page.getByRole("button", { name: /获取下一条线索/ }).click();
-  await page.getByText("查阅档案卡", { exact: true }).waitFor();
-  await page.getByLabel(/你想调查什么/).fill("为什么不能简单照搬城市中心道路？");
-  await page.getByRole("button", { name: /获取下一条线索/ }).click();
-  await page.getByText("回看之前的 1 次探究").waitFor();
-  await page.locator(".archive-agent").screenshot({ path: join(outputDir, "agent-explore-desktop.png"), animations: "disabled" });
+  const chatInput = page.getByLabel("输入聊天消息");
+  await chatInput.fill("为什么不能简单照搬城市中心道路？");
+  if (chatOnline) {
+    await page.getByRole("button", { name: "发送消息", exact: true }).click();
+    await page.locator(".chat-message.is-assistant").waitFor();
+    await chatInput.fill("今天有点累，帮我安排休息");
+    await page.getByRole("button", { name: "发送消息", exact: true }).click();
+    await page.locator(".chat-message.is-assistant").nth(1).waitFor();
+  } else {
+    await page.getByText("模型待连接", { exact: true }).waitFor();
+    assert.equal(await page.getByRole("button", { name: "发送消息", exact: true }).isDisabled(), true);
+  }
+  await page.locator(".chat-workspace").screenshot({ path: join(outputDir, "chat-case-desktop.png"), animations: "disabled" });
 
   await page.getByRole("button", { name: /请求提示/ }).click();
   await page.getByText(/提示/).first().waitFor();
@@ -181,7 +190,8 @@ try {
   await page.getByText("线索已全部归位", { exact: false }).first().waitFor();
   await page.locator("#discovery").scrollIntoViewIfNeeded();
   await capture(page, "case-solved-desktop.png");
-  await page.locator(".archive-agent").screenshot({ path: join(outputDir, "agent-connect-desktop.png"), animations: "disabled" });
+  if (chatOnline) assert.equal(await page.locator(".chat-message.is-assistant").count(), 2, "conversation survives reload");
+  else assert.equal(await page.getByLabel("输入聊天消息").inputValue(), "为什么不能简单照搬城市中心道路？", "chat draft survives reload");
 
   await page.goto(baseURL + "/archives/chinese_modernization", { waitUntil: "networkidle" });
   await sortAllCards(page, "chinese_modernization");
@@ -219,9 +229,53 @@ try {
   await page.getByText("实事求是", { exact: true }).first().waitFor();
   await capture(page, "knowledge-desktop.png");
 
+  await page.goto(baseURL + "/chat", { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "聊天助手", exact: true }).waitFor();
+  if (chatOnline) {
+    await page.getByLabel("输入聊天消息").fill("实事求是和解放思想有什么联系？");
+    await page.getByRole("button", { name: "发送消息", exact: true }).click();
+    await page.locator(".chat-message.is-assistant").waitFor();
+    await page.getByLabel("输入聊天消息").fill("今天心情不太好，想聊聊");
+    await page.getByRole("button", { name: "发送消息", exact: true }).click();
+    await page.locator(".chat-message.is-assistant").nth(1).waitFor();
+    const savedURL = page.url();
+    await page.reload({ waitUntil: "networkidle" });
+    await page.locator(".chat-message.is-assistant").nth(1).waitFor();
+    assert.equal(page.url(), savedURL);
+    const interruptedMessage = "模拟回复已保存但网络中断";
+    await page.route("**/chat/sessions/*/messages", async (route) => {
+      await route.fetch();
+      await route.abort("failed");
+    });
+    await page.getByLabel("输入聊天消息").fill(interruptedMessage);
+    await page.getByRole("button", { name: "发送消息", exact: true }).click();
+    await page.getByRole("alert").waitFor();
+    assert.equal(await page.getByLabel("输入聊天消息").inputValue(), interruptedMessage);
+    await page.unroute("**/chat/sessions/*/messages");
+    await page.reload({ waitUntil: "networkidle" });
+    await page.locator(".chat-message.is-assistant").nth(2).waitFor();
+    await page.getByRole("button", { name: "发送消息", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector("#chat-input")?.value === "");
+    assert.equal(await page.locator(".chat-message.is-assistant").count(), 3, "retry after reload doesn't duplicate saved reply");
+    await page.getByRole("button", { name: "开始新对话", exact: true }).click();
+    assert.equal(await page.locator(".chat-message").count(), 0);
+    await page.getByLabel("输入聊天消息").fill("这是另一段聊天");
+    await page.getByRole("button", { name: "发送消息", exact: true }).click();
+    await page.locator(".chat-message.is-assistant").waitFor();
+    await page.getByRole("button", { name: "删除当前对话" }).click();
+    await page.getByRole("button", { name: "取消", exact: true }).click();
+    assert.equal(await page.locator(".chat-message.is-assistant").count(), 1);
+    await page.getByRole("button", { name: "删除当前对话" }).click();
+    await page.getByRole("button", { name: "删除", exact: true }).click();
+    await page.locator(".chat-empty").waitFor();
+    await page.locator(".chat-history-item", { hasText: "实事求是和解放思想" }).click();
+    await page.locator(".chat-message.is-assistant").nth(1).waitFor();
+  }
+  await capture(page, "chat-desktop.png");
+
   const auth = await page.evaluate(() => localStorage.getItem("mingbian-auth"));
   assert.ok(auth, "auth state was not persisted");
-  const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+  const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
   await mobile.addInitScript((value) => localStorage.setItem("mingbian-auth", value), auth);
   const mobilePage = await mobile.newPage();
   observe(mobilePage);
@@ -232,6 +286,7 @@ try {
     ["/threads", "档案主线", "threads-mobile.png"],
     ["/journal", "我的发现", "journal-mobile.png"],
     ["/knowledge", "理论手册", "knowledge-mobile.png"],
+    ["/chat", "聊天助手", "chat-mobile.png"],
   ]) {
     await mobilePage.goto(baseURL + path, { waitUntil: "networkidle" });
     await mobilePage.getByRole("heading", { name: heading, exact: typeof heading === "string" }).first().waitFor();
@@ -251,7 +306,30 @@ try {
   await mobilePage.getByRole("dialog", { name: "导航菜单" }).getByRole("link", { name: /档案关卡/ }).click();
   await mobilePage.getByRole("heading", { name: "打开历史档案" }).waitFor();
   await mobilePage.goto(baseURL + "/archives/rural_road", { waitUntil: "networkidle" });
-  await mobilePage.locator(".archive-agent").screenshot({ path: join(outputDir, "agent-mobile.png"), animations: "disabled" });
+  assert.equal(await mobilePage.locator(".archive-chat-shortcut").isVisible(), true);
+  await mobilePage.locator(".archive-chat-shortcut").click();
+  await mobilePage.getByRole("heading", { name: "聊天助手", exact: true }).waitFor();
+  if (chatOnline) {
+    await mobilePage.getByRole("button", { name: /记录/, exact: true }).click();
+    await mobilePage.locator(".chat-history-item", { hasText: "为什么不能简单照搬" }).click();
+    await mobilePage.locator(".chat-message.is-assistant").nth(1).waitFor();
+    await capture(mobilePage, "chat-conversation-mobile.png");
+    await mobilePage.getByLabel("输入聊天消息").fill("手机上也可以继续聊吗？");
+    await mobilePage.getByRole("button", { name: "发送消息", exact: true }).click();
+    await mobilePage.locator(".chat-message.is-assistant").nth(2).waitFor();
+    await mobilePage.getByLabel("输入聊天消息").focus();
+    await capture(mobilePage, "chat-focused-mobile.png");
+    await mobilePage.setViewportSize({ width: 320, height: 568 });
+    await capture(mobilePage, "chat-small-mobile.png");
+    const sendBounds = await mobilePage.getByRole("button", { name: "发送消息", exact: true }).boundingBox();
+    assert.ok(sendBounds && sendBounds.y + sendBounds.height <= 568, "mobile send button stays in viewport");
+    await mobilePage.setViewportSize({ width: 390, height: 440 });
+    await capture(mobilePage, "chat-keyboard-mobile.png");
+    const keyboardBounds = await mobilePage.getByRole("button", { name: "发送消息", exact: true }).boundingBox();
+    assert.ok(keyboardBounds && keyboardBounds.y + keyboardBounds.height <= 440, "send button fits reduced viewport");
+    await mobilePage.setViewportSize({ width: 320, height: 568 });
+  }
+  await mobilePage.goto(baseURL + "/archives/rural_road", { waitUntil: "networkidle" });
   await mobilePage.locator("#evidence").scrollIntoViewIfNeeded();
   await capture(mobilePage, "evidence-mobile.png");
   assert.deepEqual(problems, []);
