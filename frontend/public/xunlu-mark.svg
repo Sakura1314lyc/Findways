@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs><linearGradient id="copper" x1="14" y1="5" x2="84" y2="96" gradientUnits="userSpaceOnUse"><stop stop-color="#c37a54"/><stop offset=".52" stop-color="#a75a3f"/><stop offset="1" stop-color="#713f32"/></linearGradient></defs>
+  <path d="M50 3C64 3 82 10 90 24C97 36 98 59 90 74C82 90 64 97 49 97C33 97 15 89 8 75C1 61 2 38 10 24C18 10 35 3 50 3Z" fill="url(#copper)"/>
+  <circle cx="50" cy="50" r="41" stroke="#efd5a5" stroke-opacity=".65" stroke-width="1.25"/>
+  <path d="M50 8V13M50 87V92M8 50H13M87 50H92" stroke="#efd5a5" stroke-width="1.5"/>
+  <path d="M22 47C32 42 41 42 50 47C59 42 68 42 78 47V72C68 67 59 67 50 72C41 67 32 67 22 72V47Z" fill="#f5e6c4" fill-opacity=".08" stroke="#fff0ce" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M29 52C35 50 40 51 44 53M29 58C34 56 38 57 41 58M29 64C34 62 39 63 43 65M57 53C62 51 67 50 71 52M59 59C63 57 67 56 71 58M58 65C63 63 67 62 71 64" stroke="#efd5a5" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M40 80C58 69 57 61 49 56C44 52 46 46 50 41" stroke="#985036" stroke-width="9" stroke-linecap="round"/>
+  <path d="M40 80C58 69 57 61 49 56C44 52 46 46 50 41" stroke="#fff0ce" stroke-width="3" stroke-linecap="round"/>
+  <path d="M50 17L53 25L61 28L53 31L50 39L47 31L39 28L47 25L50 17Z" fill="#fff0ce"/>
+</svg>

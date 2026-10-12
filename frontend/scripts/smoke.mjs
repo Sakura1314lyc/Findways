@@ -139,18 +139,30 @@ try {
 
   await page.goto(baseURL + "/archives", { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "打开历史档案" }).waitFor();
-  await page.getByRole("heading", { name: /革命道路为何走向农村/ }).waitFor();
+  await page.getByRole("heading", { name: "第二章", exact: true }).waitFor();
+  assert.equal(await page.getByRole("heading", { name: /革命道路为何走向农村/ }).count(), 0);
   await capture(page, "catalog-desktop.png");
+  await page.getByRole("button", { name: "打开第一章档案介绍", exact: true }).click();
+  const preview = page.locator(".archive-inline-preview");
+  await preview.getByRole("heading", { name: "从实际出发，答案在哪里？" }).waitFor();
+  assert.equal(page.url(), baseURL + "/archives");
+  await preview.screenshot({ path: join(outputDir, "catalog-preview-desktop.png"), animations: "disabled" });
+  await page.keyboard.press("Escape");
+  await preview.waitFor({ state: "hidden" });
   await page.getByRole("button", { name: "新时代拓展", exact: true }).click();
-  await page.getByRole("heading", { name: "现代化，怎样走出自己的路？" }).waitFor();
+  await page.getByRole("heading", { name: "拓展二", exact: true }).waitFor();
   assert.equal(await page.locator(".archive-case-card").count(), 2);
   await capture(page, "catalog-extension-desktop.png");
   await page.getByRole("button", { name: "综合关", exact: true }).click();
-  await page.getByRole("heading", { name: "这条道路是怎样走出来的？" }).waitFor();
+  await page.getByRole("heading", { name: "综合关", exact: true }).waitFor();
   assert.equal(await page.locator(".archive-case-card").count(), 1);
 
   const lockedResponse = page.waitForResponse((response) => response.url().endsWith("/api/v1/archives/cases/rural_road") && response.request().method() === "GET");
-  await page.goto(baseURL + "/archives/rural_road", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "全部档案", exact: true }).click();
+  await page.getByRole("button", { name: "打开第二章档案介绍", exact: true }).click();
+  await preview.getByRole("heading", { name: "革命道路为何走向农村？" }).waitFor();
+  await preview.getByRole("link", { name: "进入探索", exact: true }).click();
+  await page.waitForURL(baseURL + "/archives/rural_road");
   const lockedCase = await (await lockedResponse).json();
   assert.ok(!("theory_summary" in lockedCase) && !("reflection_prompt" in lockedCase));
   assert.ok(!("hints" in lockedCase) && !("probes" in lockedCase) && !("transfer" in lockedCase));
@@ -159,7 +171,7 @@ try {
   assert.equal(lockedCase.card_total, lockedCase.cards.length);
   assert.ok(lockedCase.card_total === 7 || lockedCase.card_total === 8);
   assert.ok(lockedCase.cards.every((card) => Object.keys(card).join(",") === "id,label,text,source"));
-  await page.getByRole("heading", { name: "革命道路为何走向农村？" }).waitFor();
+  await page.getByRole("heading", { name: "革命道路为何走向农村？", level: 1 }).waitFor();
   await capture(page, "case-desktop.png");
 
   const chatInput = page.getByLabel("输入聊天消息");
@@ -305,7 +317,13 @@ try {
   await mobilePage.getByRole("button", { name: "打开导航" }).click();
   await mobilePage.getByRole("dialog", { name: "导航菜单" }).getByRole("link", { name: /档案关卡/ }).click();
   await mobilePage.getByRole("heading", { name: "打开历史档案" }).waitFor();
-  await mobilePage.goto(baseURL + "/archives/rural_road", { waitUntil: "networkidle" });
+  await mobilePage.getByRole("button", { name: "打开第二章档案介绍", exact: true }).click();
+  const mobilePreview = mobilePage.locator(".archive-inline-preview");
+  await mobilePreview.getByText("已完成", { exact: true }).waitFor();
+  await mobilePreview.screenshot({ path: join(outputDir, "catalog-preview-mobile.png"), animations: "disabled" });
+  await mobilePreview.getByRole("link", { name: "进入探索", exact: true }).click();
+  await mobilePage.waitForURL(baseURL + "/archives/rural_road");
+  await mobilePage.getByRole("heading", { name: "革命道路为何走向农村？", exact: true, level: 1 }).waitFor();
   assert.equal(await mobilePage.locator(".archive-chat-shortcut").isVisible(), true);
   await mobilePage.locator(".archive-chat-shortcut").click();
   await mobilePage.getByRole("heading", { name: "聊天助手", exact: true }).waitFor();

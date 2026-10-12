@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Check, CircleAlert, Search, SlidersHorizontal, Archive, MoveUpRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUpRight, CircleAlert, Search, SlidersHorizontal } from "lucide-react";
 import { api, apiErrorMessage } from "../lib/api";
 import type { ArchiveCase, ArchiveOverview } from "../lib/archive";
 import { archivePeriod, coverClass, progressOf } from "../lib/archive";
 import ArchiveArtwork from "../components/ArchiveArtwork";
+import ArchivePreviewPanel from "../components/ArchivePreviewPanel";
 
 export default function ArchiveCatalogPage() {
   const [cases, setCases] = useState<ArchiveCase[]>([]);
@@ -13,6 +13,12 @@ export default function ArchiveCatalogPage() {
   const [active, setActive] = useState("全部档案");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<ArchiveCase | null>(null);
+  const coverRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const dismiss = (code: string) => {
+    setSelected(null);
+    coverRefs.current[code]?.focus({ preventScroll: true });
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -32,29 +38,37 @@ export default function ArchiveCatalogPage() {
     return inPeriod && (!term || [item.title, item.chapter, item.mission, item.theory_name].some((text) => text.toLowerCase().includes(term)));
   }), [active, cases, query]);
 
+  const rows = useMemo(() => Array.from({ length: Math.ceil(filtered.length / 2) }, (_, index) => filtered.slice(index * 2, index * 2 + 2)), [filtered]);
+
   return (
     <div className="archive-page archive-catalog-page space-y-6">
       <header className="archive-catalog-masthead">
         <div className="archive-catalog-masthead-copy">
-          <div className="archive-eyebrow !text-[#e8c89c]">THE COLLECTION / 馆藏目录</div>
-          <h1 className="mt-4 font-serif text-[34px] font-semibold text-white sm:text-[44px]">打开历史档案</h1>
-          <p className="mt-3 max-w-xl text-sm leading-7 text-[#e6decf]">{cases.length || "…"} 份档案，串联教材八章与新时代拓展专题，找出理论形成的线索。</p>
+          <div className="archive-eyebrow">THE COLLECTION / 馆藏目录</div>
+          <h1 className="archive-catalog-title">打开历史档案</h1>
           <div className="archive-catalog-masthead-rule"><span>馆藏编号 · 01—{String(cases.length || 10).padStart(2, "0")}</span><span>循迹 / 求证 / 发现</span></div>
         </div>
-        <div className="archive-catalog-object" aria-hidden="true"><Archive size={88} strokeWidth={.8} /><span>寻路<br />档案馆</span></div>
+        <div className="archive-catalog-stacks" aria-hidden="true">
+          <div className="catalog-folder catalog-folder-back"><span className="catalog-folder-tab">改革</span><span className="catalog-folder-year">1978</span></div>
+          <div className="catalog-folder catalog-folder-middle"><span className="catalog-folder-tab">建设</span><span className="catalog-folder-year">1956</span></div>
+          <div className="catalog-folder catalog-folder-front"><span className="catalog-folder-tab">革命</span><div className="catalog-folder-label"><small>CHINA / FIELD ARCHIVES</small><strong>中国道路</strong><span>历史 · 实践 · 理论</span></div><span className="catalog-folder-stamp">馆藏</span></div>
+        </div>
+        <div className="archive-catalog-era-track" aria-label="历史脉络：革命、建设、改革与新时代"><span><b>1927</b><small>革命探索</small></span><i /><span><b>1956</b><small>建设起步</small></span><i /><span><b>1978</b><small>改革开放</small></span><i /><span><b>新时代</b><small>接续前行</small></span></div>
       </header>
 
       {error && <div role="alert" className="archive-error"><CircleAlert size={17} />{error}</div>}
 
+      <div className="archive-catalog-toolbar">
       <div className="archive-catalog-search flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
         <div className="relative min-w-0 flex-1">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9e9384]" />
-          <input className="archive-input !pl-11" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="搜索档案" placeholder="搜索章节、理论或历史问题" />
+          <input className="archive-input !pl-11" value={query} onChange={(event) => { setQuery(event.target.value); setSelected(null); }} aria-label="搜索档案" placeholder="搜索章节、理论或历史问题" />
         </div>
         <span className="flex items-center gap-2 text-xs text-[#958b7d]"><SlidersHorizontal size={15} /> 按历史阶段筛选</span>
       </div>
       <div className="archive-catalog-filters flex flex-wrap gap-2">
-        {periods.map((period) => <button type="button" key={period} onClick={() => setActive(period)} className={"rounded-full px-4 py-2 text-xs font-medium transition " + (active === period ? "bg-[#2c4035] text-white" : "border border-[#dfd6c7] bg-white/60 text-[#71675b] hover:bg-white")}>{period}</button>)}
+        {periods.map((period) => <button type="button" key={period} aria-pressed={active === period} onClick={() => { setActive(period); setSelected(null); }} className={"rounded-full px-4 py-2 text-xs font-medium transition " + (active === period ? "bg-[#2c4035] text-white" : "border border-[#dfd6c7] bg-white/60 text-[#71675b] hover:bg-white")}>{period}</button>)}
+      </div>
       </div>
 
       <div className="flex items-end justify-between gap-3">
@@ -64,27 +78,31 @@ export default function ArchiveCatalogPage() {
       {loading ? <div className="grid gap-5 md:grid-cols-2">{[1, 2, 3, 4].map((n) => <div key={n} className="h-[290px] animate-pulse rounded-2xl bg-[#e3d9c9]" />)}</div> : filtered.length === 0 ? (
         <div className="archive-panel py-16 text-center"><Search className="mx-auto text-[#a69a8a]" /><h3 className="mt-3 font-serif text-xl text-[#34473b]">没有找到这份档案</h3><button className="mt-3 text-sm text-[#a8513a] underline" type="button" onClick={() => { setQuery(""); setActive("全部档案"); }}>查看全部</button></div>
       ) : (
-        <div className="archive-catalog-grid grid gap-5 md:grid-cols-2">
-          {filtered.map((item) => {
-            const index = cases.indexOf(item);
-            const progress = progressOf(overview?.items ?? [], item.code);
-            const status = progress?.completed_at ? "已完成" : progress ? "探索中" : "待开启";
-            return (
-              <Link key={item.code} to={"/archives/" + item.code} className="archive-case-card archive-catalog-item group overflow-hidden rounded-[14px]" style={{ animationDelay: `${Math.min(index, 9) * 55}ms` }}>
-                <div className={"archive-cover archive-illustrated-cover relative flex h-[190px] items-start justify-between overflow-hidden p-5 text-white " + (coverClass[item.cover] ?? "")}>
-                  <ArchiveArtwork kind={item.cover} className="archive-card-art" />
-                  <span className="archive-cover-label">{item.era}</span>
-                  <span className="font-serif text-5xl text-white/50">{String(index + 1).padStart(2, "0")}</span>
-                  <div className="absolute bottom-4 left-5 text-xs tracking-[.12em] text-white/80">{item.chapter}</div>
-                </div>
-                <div className="archive-catalog-item-body p-5">
-                  <div className="flex items-center justify-between gap-2"><span className="text-[11px] tracking-[.12em] text-[#b05d42]">档案 NO.{String(cases.indexOf(item) + 1).padStart(2, "0")}</span><span className={"rounded-full px-2.5 py-1 text-[11px] " + (progress?.completed_at ? "bg-[#e6efe2] text-[#567553]" : progress ? "bg-[#f4ead6] text-[#a4763f]" : "bg-[#f2eee6] text-[#938879]")}>{progress?.completed_at && <Check size={11} className="mr-1 inline" />}{status}</span></div>
-                  <h3 className="mt-3 font-serif text-[22px] font-semibold leading-8 text-[#263b31]">{item.title}</h3>
-                  <p className="mt-2 min-h-12 text-sm leading-6 text-[#81776a]">{item.subtitle}</p>
-                  <div className="mt-4 flex items-center justify-between border-t border-[#e8dece] pt-4 text-xs font-semibold text-[#a9523b]"><span>{progress?.completed_at ? "再次阅读" : progress ? "继续探索" : "打开档案"}</span>{index === 0 ? <MoveUpRight size={16} className="transition group-hover:translate-x-1" /> : <ArrowRight size={16} className="transition group-hover:translate-x-1" />}</div>
-                </div>
-              </Link>
-            );
+        <div className="archive-catalog-grid">
+          {rows.map((row) => {
+            const expandedCode = row.some((item) => item.code === selected?.code) ? selected?.code : undefined;
+            return <div className="archive-catalog-row" key={row.map((item) => item.code).join(":")}>
+              {row.map((item) => {
+                const index = cases.indexOf(item);
+                const [chapter, ...subject] = item.chapter.split("·");
+                const expanded = expandedCode === item.code;
+                return <article key={item.code} className={"archive-catalog-item " + (expanded ? "is-expanded" : expandedCode ? "is-shelved" : "")} style={{ animationDelay: `${Math.min(index, 9) * 55}ms` }} onKeyDown={(event) => {
+                  if (event.key === "Escape" && expanded) { event.preventDefault(); event.stopPropagation(); dismiss(item.code); }
+                }}>
+                  <div className="archive-catalog-spread">
+                    <button type="button" ref={(node) => { coverRefs.current[item.code] = node; }} aria-label={"打开" + chapter.trim() + "档案介绍"} aria-expanded={expanded} aria-controls={expanded ? "archive-preview-" + item.code : undefined} className="archive-case-card archive-catalog-trigger" onClick={() => expanded ? dismiss(item.code) : setSelected(item)}>
+                      <div className={"archive-catalog-cover archive-cover " + (coverClass[item.cover] ?? "")}>
+                        <ArchiveArtwork kind={item.cover} className="archive-card-art" />
+                        <span className="archive-catalog-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                        <div className="archive-catalog-chapter"><h3>{chapter.trim()}</h3><p className="archive-catalog-theme">{subject.join("·").trim()}</p><span>{expanded ? "点击收起" : "点击展开"}</span></div>
+                        <span className="archive-catalog-open" aria-hidden="true"><ArrowUpRight size={20} /></span>
+                      </div>
+                    </button>
+                    {expanded && <ArchivePreviewPanel archive={item} number={index + 1} progress={progressOf(overview?.items ?? [], item.code)} onDismiss={() => dismiss(item.code)} />}
+                  </div>
+                </article>;
+              })}
+            </div>;
           })}
         </div>
       )}

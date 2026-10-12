@@ -49,12 +49,12 @@ export default function ThreadsPage() {
   }
 
   return (
-    <div className="archive-page space-y-6">
+    <div className="archive-page archive-threads-page space-y-6">
       <Link to="/archives" className="inline-flex items-center gap-1 text-xs font-medium text-[#7f766a] hover:text-[#a5523c]">
         <ArrowLeft size={15} /> 返回档案目录
       </Link>
 
-      <header className="archive-panel p-6 sm:p-7">
+      <header className="archive-threads-intro archive-panel p-6 sm:p-7">
         <div className="archive-eyebrow">FIELD THREADS</div>
         <h1 className="mt-2 flex items-center gap-2 font-serif text-[27px] font-semibold text-[#273a31]">
           <Route size={24} className="text-[#a8543d]" /> 档案主线
@@ -76,7 +76,7 @@ export default function ThreadsPage() {
           const ratio = item.total > 0 ? item.collected / item.total : 0;
           const justSaved = saved[item.thread] !== undefined;
           return (
-            <article key={item.thread} className="archive-panel flex flex-col p-5 sm:p-6">
+            <article key={item.thread} data-thread={item.thread} className="archive-panel flex flex-col p-5 sm:p-6">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[10px] tracking-[.14em] text-[#aa624b]">主线 {item.thread}</div>

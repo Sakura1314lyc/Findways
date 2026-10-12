@@ -3,6 +3,7 @@ import { Archive, ArrowUpRight, BookMarked, Compass, GraduationCap, LogOut, Menu
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuthStore } from "../stores/auth";
+import BrandLogo from "./BrandLogo";
 
 const nav = [
   { to: "/", label: "探索首页", icon: Compass, sub: "从一条线索出发" },
@@ -60,21 +61,15 @@ export default function Layout() {
   const items = user?.is_superuser ? [...nav, teacherNav] : nav;
 
   const sidebar = (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-full flex-col">
       <div className="flex items-center justify-between px-7 pb-8 pt-8">
-        <Link to="/" className="flex items-center gap-3">
-          <span className="archive-seal flex h-11 w-11 items-center justify-center rounded-[14px] font-serif text-2xl text-white">路</span>
-          <span>
-            <strong className="block font-serif text-[23px] leading-none tracking-[.18em] text-white">寻路</strong>
-            <small className="mt-1.5 block text-[9px] tracking-[.22em] text-[#b8ae9c]">THE PATH ARCHIVE</small>
-          </span>
-        </Link>
-        <button className="p-2 text-white/70 lg:hidden" type="button" aria-label="关闭导航" onClick={() => setOpen(false)}><X size={20} /></button>
+        <Link to="/" aria-label="寻路首页" onClick={() => setOpen(false)}><BrandLogo inverse /></Link>
+        <button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white/70 transition hover:bg-white/10 hover:text-white" type="button" aria-label="关闭导航" onClick={() => setOpen(false)}><X size={20} /></button>
       </div>
       <div className="px-7 text-[10px] tracking-[.22em] text-[#afa897]">EXPLORE / 探索目录</div>
       <nav aria-label="主导航" className="mt-4 space-y-1 px-3">
         {items.map(({ to, label, sub, icon: Icon }) => (
-          <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => "archive-nav " + (isActive ? "archive-nav-active" : "")}>
+          <NavLink key={to} to={to} end={to === "/"} onClick={() => setOpen(false)} className={({ isActive }) => "archive-nav " + (isActive ? "archive-nav-active" : "")}>
             <Icon size={19} strokeWidth={1.7} />
             <span><strong className="block text-sm font-medium">{label}</strong><small className="mt-0.5 block text-[11px] opacity-55">{sub}</small></span>
           </NavLink>
@@ -84,7 +79,7 @@ export default function Layout() {
         <div className="rounded-2xl border border-white/10 bg-white/[.05] p-5">
           <span className="text-[10px] tracking-[.18em] text-[#d9b685]">探索者寄语</span>
           <p className="mt-3 font-serif text-[17px] leading-7 text-white">从历史条件出发，<br />才能理解理论从何而来。</p>
-          <Link to="/archives" className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-[#e9c9a1]">打开档案 <ArrowUpRight size={14} /></Link>
+          <Link to="/archives" onClick={() => setOpen(false)} className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-[#e9c9a1]">打开档案 <ArrowUpRight size={14} /></Link>
         </div>
         <div className="mt-5 flex items-center gap-3 px-2 text-white/80">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#c6bca6] font-serif text-sm text-[#2c352f]">{user?.username?.slice(0, 1) ?? "我"}</span>
@@ -97,14 +92,14 @@ export default function Layout() {
 
   const pageName = location.pathname.startsWith("/archives/") ? "档案现场" : items.find((item) => item.to === location.pathname)?.label ?? "寻路";
   return (
-    <div className="min-h-screen bg-[#f5f1e8] lg:flex">
+    <div className="min-h-screen bg-[#f5f1e8]">
       <a href="#main-content" className="archive-skip-link">跳转到正文</a>
-      <aside className="archive-sidebar hidden w-[248px] shrink-0 lg:sticky lg:top-0 lg:block lg:h-screen lg:overflow-y-auto">{sidebar}</aside>
-      <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between border-b border-[#dfd8ca] bg-[#f5f1e8]/95 px-5 backdrop-blur sm:px-9">
-          <div className="flex items-center gap-3">
-            <button className="mr-1 rounded-lg p-2 text-[#263a32] lg:hidden" type="button" aria-label="打开导航" onClick={() => setOpen(true)}><Menu size={21} /></button>
-            <span className="text-xs tracking-[.14em] text-[#9a9080]">寻路 / <strong className="font-medium text-[#344039]">{pageName}</strong></span>
+      <div className="min-w-0">
+        <header className="archive-app-header sticky top-0 z-30 flex h-[68px] items-center justify-between border-b border-[#dfd8ca] bg-[#f5f1e8]/95 px-4 backdrop-blur sm:px-9">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+            <button className="archive-navigation-trigger" type="button" aria-label="打开导航" title="打开导航" aria-expanded={open} aria-controls="archive-navigation" onClick={() => setOpen((value) => !value)}><Menu size={21} /><span className="hidden text-xs font-medium sm:block">目录</span></button>
+            <Link to="/" aria-label="寻路首页" className="shrink-0"><BrandLogo compact /></Link>
+            <span className="archive-header-page hidden text-xs text-[#817667] sm:block">{pageName}</span>
           </div>
           <div className="flex items-center gap-4"><span className="hidden items-center gap-2 text-xs text-[#7d776a] sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-[#b96545]" /> 毛概课程历史探究</span><Link to="/journal" aria-label="查看我的发现" className="flex h-8 w-8 items-center justify-center rounded-full border border-[#d9cbb5] bg-[#eee1cc] font-serif text-sm text-[#6e5842]">{user?.username?.slice(0, 1) ?? "我"}</Link></div>
         </header>
@@ -113,7 +108,7 @@ export default function Layout() {
       <nav aria-label="快捷导航" className="archive-mobile-tabs lg:hidden">
         {items.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => "archive-mobile-tab " + (isActive ? "is-active" : "")}><Icon size={20} strokeWidth={1.7} /><span>{label}</span></NavLink>)}
       </nav>
-      {open && <div className="fixed inset-0 z-50 bg-[#17221d]/60 lg:hidden" onMouseDown={() => setOpen(false)}><aside ref={drawerRef} role="dialog" aria-modal="true" aria-label="导航菜单" className="archive-sidebar h-full w-[min(290px,86vw)] overflow-y-auto" onMouseDown={(event) => event.stopPropagation()}>{sidebar}</aside></div>}
+      {open && <div className="archive-navigation-backdrop fixed inset-0 z-50 bg-[#17221d]/60" onClick={(event) => { if (event.target === event.currentTarget) setOpen(false); }}><aside id="archive-navigation" ref={drawerRef} role="dialog" aria-modal="true" aria-label="导航菜单" className="archive-sidebar archive-navigation-drawer h-full w-[min(320px,86vw)] overflow-y-auto">{sidebar}</aside></div>}
     </div>
   );
 }

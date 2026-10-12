@@ -1,4 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="15" fill="#263b31"/>
-  <text x="32" y="45" fill="#eacb9f" font-family="Songti SC,Noto Serif SC,serif" font-size="42" font-weight="700" text-anchor="middle">路</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <circle cx="50" cy="50" r="47" fill="#a75a3f"/>
+  <circle cx="50" cy="50" r="41" stroke="#efd5a5" stroke-width="2"/>
+  <path d="M21 46Q36 39 50 46Q64 39 79 46V73Q64 66 50 73Q36 66 21 73Z" stroke="#fff0ce" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M40 81C59 69 58 61 49 55Q44 50 50 40" stroke="#a75a3f" stroke-width="12" stroke-linecap="round"/>
+  <path d="M40 81C59 69 58 61 49 55Q44 50 50 40" stroke="#fff0ce" stroke-width="4" stroke-linecap="round"/>
+  <path d="M50 16L54 24L63 28L54 32L50 40L46 32L37 28L46 24Z" fill="#fff0ce"/>
 </svg>
